@@ -6,11 +6,11 @@ export const CONFIG = {
   TOTAL_LAPS: 3,
   AI_COUNT: 3,
   TRACK_SAMPLE_COUNT: 600,
-  WAYPOINT_REACH_DIST: 90,
+  WAYPOINT_REACH_DIST: 100,
   CAR: {
-    MAX_SPEED: 320,
-    ACCELERATION: 480,
-    BRAKE_FORCE: 650,
+    MAX_SPEED: 440,      // px/s — higher for snappier arcade feel
+    ACCELERATION: 660,
+    BRAKE_FORCE: 950,
     ROLLING_FRICTION: 0.992,
     LATERAL_GRIP: 0.60,
     MAX_STEER_RATE: 2.2,
@@ -18,9 +18,11 @@ export const CONFIG = {
     WIDTH: 26,
     HEIGHT: 15,
   },
+  // AI speed factors relative to player MAX_SPEED.
+  // Hard AIs match the player exactly so the race feels genuinely competitive.
   DIFFICULTIES: {
-    easy:   { speeds: [0.65, 0.68, 0.62] as [number, number, number], lookahead: 3 },
-    medium: { speeds: [0.82, 0.86, 0.78] as [number, number, number], lookahead: 4 },
-    hard:   { speeds: [0.93, 0.96, 0.89] as [number, number, number], lookahead: 6 },
+    easy:   { speeds: [0.72, 0.76, 0.68] as [number, number, number], lookahead: 3 },
+    medium: { speeds: [0.90, 0.94, 0.86] as [number, number, number], lookahead: 4 },
+    hard:   { speeds: [1.00, 1.00, 0.97] as [number, number, number], lookahead: 6 },
   },
 };

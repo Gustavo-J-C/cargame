@@ -21,4 +21,8 @@ export const TRACK_COLORS = {
   kerbWhite: '#f0f0f0',
   startLine: '#ffffff',
   shadow: 'rgba(0,0,0,0.3)',
+  runOff: '#8a8070',
+  tree: '#2a5c24',
+  treeHighlight: '#3d8c33',
+  treeShadow: 'rgba(0,0,0,0.20)',
 };

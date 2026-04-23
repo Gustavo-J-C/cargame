@@ -26,4 +26,6 @@ export interface TrackGeometry {
   // Lane dividers for 3-lane road markings (at ±1/3 of half-width)
   laneDividerL: Vector2[];
   laneDividerR: Vector2[];
+  // Scattered tree positions outside the drivable surface
+  treePositions: Vector2[];
 }

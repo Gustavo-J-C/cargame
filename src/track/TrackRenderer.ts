@@ -43,10 +43,19 @@ export function renderTrack(
     ctx.fill();
   }
 
+  // --- Layer 1b: Trees (behind road, over grass) ---
+  renderTrees(ctx, geo, camX, camY, viewW, viewH);
+
   // --- Layer 2: Road surface ---
   ctx.save();
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
+
+  // Run-off strip: sandy stroke just outside road edges (fill covers inner half)
+  ctx.strokeStyle = TRACK_COLORS.runOff;
+  ctx.lineWidth = 28;
+  drawPolyline(ctx, geo.boundaryPolygon, true);
+  ctx.stroke();
 
   ctx.fillStyle = def.roadColor;
   drawPolyline(ctx, geo.boundaryPolygon, true);
@@ -132,6 +141,44 @@ function drawKerbRect(
   ctx.lineTo(insetA.x, insetA.y);
   ctx.closePath();
   ctx.fill();
+}
+
+function renderTrees(
+  ctx: CanvasRenderingContext2D,
+  geo: TrackGeometry,
+  camX: number, camY: number, viewW: number, viewH: number,
+): void {
+  const cullX1 = camX - viewW / 2 - 60;
+  const cullX2 = camX + viewW / 2 + 60;
+  const cullY1 = camY - viewH / 2 - 60;
+  const cullY2 = camY + viewH / 2 + 60;
+
+  for (let i = 0; i < geo.treePositions.length; i++) {
+    const tp = geo.treePositions[i];
+    if (tp.x < cullX1 || tp.x > cullX2 || tp.y < cullY1 || tp.y > cullY2) continue;
+
+    // Vary radius slightly per tree for a natural look
+    const hash = Math.sin(i * 127.1 + tp.x * 0.03) * 0.5 + 0.5;
+    const r = 16 + hash * 8; // 16–24 px
+
+    // Shadow
+    ctx.fillStyle = TRACK_COLORS.treeShadow;
+    ctx.beginPath();
+    ctx.ellipse(tp.x + 5, tp.y + 7, r * 0.9, r * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Canopy
+    ctx.fillStyle = TRACK_COLORS.tree;
+    ctx.beginPath();
+    ctx.arc(tp.x, tp.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Highlight (smaller, offset up-left)
+    ctx.fillStyle = TRACK_COLORS.treeHighlight;
+    ctx.beginPath();
+    ctx.arc(tp.x - r * 0.28, tp.y - r * 0.28, r * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function renderStartLine(ctx: CanvasRenderingContext2D, geo: TrackGeometry): void {
