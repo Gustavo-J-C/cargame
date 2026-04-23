@@ -61,14 +61,26 @@ export function renderTrack(
 
   ctx.restore();
 
-  // --- Layer 3: Center dashed line ---
+  // --- Layer 3: Lane dividers + centre line ---
   ctx.save();
+
+  // Two outer lane dividers (subtle, white)
+  ctx.setLineDash([14, 24]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.30)';
+  ctx.lineWidth = 2;
+  drawPolyline(ctx, geo.laneDividerL, false);
+  ctx.stroke();
+  drawPolyline(ctx, geo.laneDividerR, false);
+  ctx.stroke();
+
+  // Centre dashed line (yellow, more prominent)
   ctx.setLineDash([18, 18]);
   ctx.strokeStyle = TRACK_COLORS.roadLine;
   ctx.lineWidth = 2.5;
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.55;
   drawPolyline(ctx, geo.centerline, false);
   ctx.stroke();
+
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
   ctx.restore();

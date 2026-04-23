@@ -18,9 +18,12 @@ export interface TrackGeometry {
   centerline: Vector2[];
   leftEdge: Vector2[];
   rightEdge: Vector2[];
-  widths: number[];            // track width at each centerline point
-  boundaryPolygon: Vector2[];  // left edge + reversed right edge (for collision)
+  widths: number[];
+  boundaryPolygon: Vector2[];
   startLine: { left: Vector2; right: Vector2 };
   startAngle: number;
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
+  // Lane dividers for 3-lane road markings (at ±1/3 of half-width)
+  laneDividerL: Vector2[];
+  laneDividerR: Vector2[];
 }

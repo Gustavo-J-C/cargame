@@ -11,63 +11,48 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; background: #0a0a12; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
 
-    /* ── Game container ─────────────────────────────────────────── */
-    #game-container { position: fixed; top: 0; left: 0; transform-origin: 0 0; transition: opacity 0.3s; }
+    /* ── Game container ──────────────────────────────────────────── */
+    #game-container { position: fixed; top: 0; left: 0; transform-origin: 0 0; transition: opacity 0.25s; }
     canvas { display: block; }
     #hud-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
 
-    /* ── Lobby overlay ──────────────────────────────────────────── */
+    /* ── Lobby overlay ───────────────────────────────────────────── */
     #lobby-overlay {
-      display: flex;
-      position: fixed; inset: 0; z-index: 200;
+      display: flex; position: fixed; inset: 0; z-index: 200;
       align-items: center; justify-content: center;
       background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a12 100%);
     }
-
     .lobby-card {
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 20px;
-      padding: 36px 44px;
+      border-radius: 20px; padding: 36px 44px;
       width: min(500px, 92vw);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 0;
       box-shadow: 0 8px 40px rgba(0,0,0,0.5);
     }
-
     .lobby-title { font-size: 38px; font-weight: 900; color: #f9e79f; letter-spacing: 1px; text-shadow: 0 2px 16px rgba(249,231,159,0.35); margin-bottom: 4px; }
     .lobby-subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
-
-    /* Each step is a full-width flex column */
     .lobby-step { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
-
     .label { font-size: 12px; color: #888; letter-spacing: 1px; text-transform: uppercase; align-self: flex-start; }
-
     #player-name {
       width: 100%; padding: 12px 16px;
       border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.18);
       background: rgba(255,255,255,0.07); color: #fff;
-      font-size: 18px; font-weight: 600; outline: none;
-      transition: border-color 0.2s;
+      font-size: 18px; font-weight: 600; outline: none; transition: border-color 0.2s;
     }
     #player-name:focus { border-color: #f9e79f; }
     #player-name::placeholder { color: #444; }
-
     .mode-btns { display: flex; gap: 12px; width: 100%; }
     .mode-btn {
       flex: 1; padding: 16px 10px; border-radius: 12px;
       border: 2px solid transparent; font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px;
+      cursor: pointer; transition: all 0.15s;
     }
     #btn-mode-ai    { background: rgba(46,204,113,0.15); border-color: rgba(46,204,113,0.45); color: #2ecc71; }
     #btn-mode-ai:hover    { background: rgba(46,204,113,0.28); border-color: #2ecc71; }
     #btn-mode-online { background: rgba(52,152,219,0.15); border-color: rgba(52,152,219,0.45); color: #3498db; }
     #btn-mode-online:hover { background: rgba(52,152,219,0.28); border-color: #3498db; }
-
     .section-label { font-size: 13px; color: #888; letter-spacing: 1.5px; text-transform: uppercase; }
-
     .diff-btns { display: flex; gap: 8px; width: 100%; }
     .diff-btn {
       flex: 1; padding: 12px 6px; border-radius: 10px;
@@ -76,7 +61,6 @@
     }
     .diff-btn:hover { border-color: rgba(255,255,255,0.3); color: #ddd; }
     .diff-btn.active { border-color: #f9e79f; background: rgba(249,231,159,0.12); color: #f9e79f; }
-
     .action-btn {
       width: 100%; padding: 17px; border-radius: 50px; border: none;
       font-size: 19px; font-weight: 800; letter-spacing: 0.8px;
@@ -91,13 +75,11 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
     .action-btn.secondary:hover { color: #ccc; }
-
     .divider { color: #444; font-size: 13px; }
-
     .join-row { display: flex; gap: 10px; width: 100%; }
     #room-code-input {
-      flex: 1; padding: 12px 14px;
-      border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.18);
+      flex: 1; padding: 12px 14px; border-radius: 10px;
+      border: 1.5px solid rgba(255,255,255,0.18);
       background: rgba(255,255,255,0.07); color: #fff;
       font-size: 20px; font-weight: 700; text-transform: uppercase;
       letter-spacing: 4px; outline: none; text-align: center;
@@ -109,29 +91,87 @@
       cursor: pointer; transition: background 0.15s; white-space: nowrap;
     }
     #btn-join-room:hover { background: #2980b9; }
-
     .room-code-big {
       font-size: 34px; font-weight: 900; letter-spacing: 6px; color: #f9e79f;
       background: rgba(249,231,159,0.08); border: 2px dashed rgba(249,231,159,0.35);
       border-radius: 12px; padding: 12px 24px; width: 100%; text-align: center;
     }
     .room-hint { font-size: 12px; color: #555; text-align: center; }
-
     #players-list { width: 100%; display: flex; flex-direction: column; gap: 6px; }
     .player-entry { padding: 9px 14px; border-radius: 8px; background: rgba(255,255,255,0.06); color: #ccc; font-size: 15px; }
-
     #waiting-msg { color: #555; font-size: 13px; text-align: center; }
-
     #lobby-error { color: #e74c3c; font-size: 13px; text-align: center; min-height: 16px; width: 100%; }
 
-    /* ── Touch controls ─────────────────────────────────────────── */
+    /* ── Pause overlay ───────────────────────────────────────────── */
+    #pause-overlay {
+      display: none; position: fixed; inset: 0; z-index: 150;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+    }
+    .pause-card {
+      background: rgba(15,15,30,0.95);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 20px; padding: 40px 48px;
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+      width: min(360px, 88vw);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    .pause-title { font-size: 32px; font-weight: 900; color: #fff; letter-spacing: 2px; }
+    .pause-btn {
+      width: 100%; padding: 16px; border-radius: 50px; border: none;
+      font-size: 17px; font-weight: 800; letter-spacing: 0.5px; cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .pause-btn:active { transform: scale(0.96); }
+    #btn-resume { background: #f9e79f; color: #111; }
+    #btn-pause-menu { background: rgba(255,255,255,0.08); color: #aaa; border: 1px solid rgba(255,255,255,0.15); }
+    #btn-pause-menu:hover { color: #fff; }
+
+    /* ── In-game pause button ────────────────────────────────────── */
+    #btn-pause {
+      display: none; position: fixed; top: 14px; right: 14px; z-index: 60;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(10,10,20,0.65); border: 1.5px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8); font-size: 18px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+      transition: background 0.1s;
+    }
+    #btn-pause:active { background: rgba(255,255,255,0.2); }
+
+    /* ── Post-race buttons ───────────────────────────────────────── */
+    .race-end-btns {
+      position: fixed;
+      bottom: max(150px, calc(130px + env(safe-area-inset-bottom, 0px)));
+      left: 50%; transform: translateX(-50%);
+      z-index: 100; display: none; flex-direction: row; gap: 14px;
+      white-space: nowrap;
+    }
+    @media (pointer: fine) { .race-end-btns { bottom: 60px; } }
+
+    .end-btn {
+      padding: 16px 36px; font-size: 19px; font-weight: 800;
+      border: none; border-radius: 50px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .end-btn:active { transform: scale(0.95); }
+    #btn-restart {
+      background: #f9e79f; color: #111;
+      box-shadow: 0 4px 20px rgba(249,231,159,0.4);
+    }
+    #btn-menu {
+      background: rgba(255,255,255,0.12); color: #ddd;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    #btn-menu:hover { background: rgba(255,255,255,0.22); color: #fff; }
+
+    /* ── Touch controls ──────────────────────────────────────────── */
     #touch-controls { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 130px; z-index: 50; pointer-events: none; }
     @media (pointer: coarse) { #touch-controls { display: block; } }
     #steer-pad, #action-pad {
       position: absolute; bottom: 0; height: 100%; width: 50%;
       display: flex; align-items: flex-end; gap: 10px;
-      padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
-      pointer-events: all;
+      padding-bottom: max(16px, env(safe-area-inset-bottom, 16px)); pointer-events: all;
     }
     #steer-pad  { left: 0;  justify-content: flex-start; padding-left:  max(16px, env(safe-area-inset-left,  16px)); }
     #action-pad { right: 0; justify-content: flex-end;   padding-right: max(16px, env(safe-area-inset-right, 16px)); }
@@ -150,22 +190,7 @@
     #btn-brake { width: 68px; height: 68px; background: rgba(231,76,60,0.18); border-color: rgba(231,76,60,0.50); font-size: 11px; font-weight: 700; color: #e74c3c; }
     #btn-brake.pressed { background: rgba(231,76,60,0.40); border-color: #e74c3c; }
 
-    /* ── Restart button ─────────────────────────────────────────── */
-    #btn-restart {
-      display: none; position: fixed;
-      bottom: max(150px, calc(130px + env(safe-area-inset-bottom, 0px)));
-      left: 50%; transform: translateX(-50%);
-      z-index: 100; padding: 18px 48px;
-      font-size: 22px; font-weight: 800; letter-spacing: 1px;
-      color: #111; background: #f9e79f; border: none; border-radius: 50px;
-      cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
-      box-shadow: 0 4px 24px rgba(249,231,159,0.45);
-      transition: transform 0.1s, box-shadow 0.1s; white-space: nowrap;
-    }
-    #btn-restart:active { transform: translateX(-50%) scale(0.95); box-shadow: 0 2px 10px rgba(249,231,159,0.3); }
-    @media (pointer: fine) { #btn-restart { bottom: 60px; } }
-
-    /* ── Portrait warning ───────────────────────────────────────── */
+    /* ── Portrait warning ────────────────────────────────────────── */
     #portrait-overlay {
       display: none; position: fixed; inset: 0; background: #111; z-index: 300;
       flex-direction: column; align-items: center; justify-content: center;
@@ -179,13 +204,12 @@
 </head>
 <body>
 
-  <!-- ── Lobby ─────────────────────────────────────────────────────────── -->
+  <!-- ── Lobby ────────────────────────────────────────────────────── -->
   <div id="lobby-overlay">
     <div class="lobby-card">
       <div class="lobby-title">Corrida de Kart</div>
-      <div class="lobby-subtitle">Grande Circuito · 3 Voltas</div>
+      <div class="lobby-subtitle">Grande Circuito · 3 Faixas · 3 Voltas</div>
 
-      <!-- Step 1: Name + mode selection -->
       <div id="step-name" class="lobby-step">
         <span class="label">Piloto</span>
         <input id="player-name" type="text" maxlength="20" placeholder="Seu nome" autocomplete="off" />
@@ -195,7 +219,6 @@
         </div>
       </div>
 
-      <!-- Step 2a: AI difficulty -->
       <div id="step-ai" class="lobby-step" hidden>
         <span class="section-label">Dificuldade dos oponentes</span>
         <div class="diff-btns">
@@ -207,7 +230,6 @@
         <button id="btn-back-ai"  class="action-btn secondary">← Voltar</button>
       </div>
 
-      <!-- Step 2b: Online options -->
       <div id="step-online" class="lobby-step" hidden>
         <button id="btn-create-room" class="action-btn">+ Criar Nova Sala</button>
         <div class="divider">— ou entre em uma sala —</div>
@@ -218,7 +240,6 @@
         <button id="btn-back-online" class="action-btn secondary">← Voltar</button>
       </div>
 
-      <!-- Step 3: Waiting room -->
       <div id="step-waiting" class="lobby-step" hidden>
         <div class="room-hint">Compartilhe o código com seus amigos:</div>
         <div class="room-code-big" id="room-code-display">------</div>
@@ -228,18 +249,29 @@
         <button id="btn-leave-room" class="action-btn secondary">Sair da Sala</button>
       </div>
 
-      <!-- Shared error message (always visible at bottom of card) -->
       <div id="lobby-error"></div>
     </div>
   </div>
 
-  <!-- ── Game canvas ───────────────────────────────────────────────────── -->
+  <!-- ── Pause overlay ─────────────────────────────────────────────── -->
+  <div id="pause-overlay">
+    <div class="pause-card">
+      <div class="pause-title">PAUSADO</div>
+      <button id="btn-resume"     class="pause-btn">▶ Continuar</button>
+      <button id="btn-pause-menu" class="pause-btn">⬅ Menu Principal</button>
+    </div>
+  </div>
+
+  <!-- ── Game canvas ───────────────────────────────────────────────── -->
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
     <canvas id="hud-canvas"></canvas>
   </div>
 
-  <!-- ── Touch controls ───────────────────────────────────────────────── -->
+  <!-- ── In-game pause button (top-right) ─────────────────────────── -->
+  <button id="btn-pause" aria-label="Pausar">⏸</button>
+
+  <!-- ── Touch controls ───────────────────────────────────────────── -->
   <div id="touch-controls">
     <div id="steer-pad">
       <button id="btn-left"  class="touch-btn steer-btn" aria-label="Virar à esquerda">◀</button>
@@ -251,10 +283,13 @@
     </div>
   </div>
 
-  <!-- ── Restart button ───────────────────────────────────────────────── -->
-  <button id="btn-restart" aria-label="Reiniciar corrida">↺ JOGAR DE NOVO</button>
+  <!-- ── Post-race buttons ─────────────────────────────────────────── -->
+  <div class="race-end-btns" id="race-end-btns">
+    <button id="btn-restart" class="end-btn">↺ JOGAR DE NOVO</button>
+    <button id="btn-menu"    class="end-btn">⬅ MENU</button>
+  </div>
 
-  <!-- ── Portrait warning ─────────────────────────────────────────────── -->
+  <!-- ── Portrait warning ──────────────────────────────────────────── -->
   <div id="portrait-overlay">
     <div class="icon">📱</div>
     <p>Gire o dispositivo<br>para modo paisagem</p>

@@ -39,10 +39,19 @@ export function buildTrack(def: TrackDefinition): TrackGeometry {
 
   for (let i = 0; i < n; i++) {
     const tangent = tangentAt(positions, i);
-    const normal = tangent.perp(); // points left
+    const normal = tangent.perp();
     const halfW = widths[i] / 2;
     leftEdge.push(positions[i].add(normal.scale(halfW)));
     rightEdge.push(positions[i].add(normal.scale(-halfW)));
+  }
+
+  // Lane dividers: 1/3 of the way from centre to each edge
+  const laneDividerL: Vector2[] = [];
+  const laneDividerR: Vector2[] = [];
+  for (let i = 0; i < n; i++) {
+    const c = positions[i];
+    laneDividerL.push(c.add(leftEdge[i].sub(c).scale(1 / 3)));
+    laneDividerR.push(c.add(rightEdge[i].sub(c).scale(1 / 3)));
   }
 
   const boundaryPolygon = [...leftEdge, ...[...rightEdge].reverse()];
@@ -54,11 +63,9 @@ export function buildTrack(def: TrackDefinition): TrackGeometry {
     left: leftEdge[sfSampleIndex],
     right: rightEdge[sfSampleIndex],
   };
-
   const tangentAtStart = tangentAt(positions, sfSampleIndex);
   const startAngle = Math.atan2(tangentAtStart.y, tangentAtStart.x);
 
-  // Compute bounding box for minimap
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of positions) {
     if (p.x < minX) minX = p.x;
@@ -76,5 +83,7 @@ export function buildTrack(def: TrackDefinition): TrackGeometry {
     startLine,
     startAngle,
     bounds: { minX, minY, maxX, maxY },
+    laneDividerL,
+    laneDividerR,
   };
 }

@@ -7,8 +7,6 @@ import type { Difficulty } from './config';
 
 const { CANVAS_WIDTH: W, CANVAS_HEIGHT: H } = CONFIG;
 
-// ── Canvas setup ────────────────────────────────────────────────────────────
-
 function setupCanvas(id: string): HTMLCanvasElement {
   const el = document.getElementById(id) as HTMLCanvasElement;
   el.width = W;
@@ -19,16 +17,8 @@ function setupCanvas(id: string): HTMLCanvasElement {
 function bindTouchBtn(id: string, keyCode: string, input: InputManager): void {
   const el = document.getElementById(id);
   if (!el) return;
-  const press = (e: Event): void => {
-    e.preventDefault();
-    input.setVirtual(keyCode, true);
-    el.classList.add('pressed');
-  };
-  const release = (e: Event): void => {
-    e.preventDefault();
-    input.setVirtual(keyCode, false);
-    el.classList.remove('pressed');
-  };
+  const press   = (e: Event): void => { e.preventDefault(); input.setVirtual(keyCode, true);  el.classList.add('pressed'); };
+  const release = (e: Event): void => { e.preventDefault(); input.setVirtual(keyCode, false); el.classList.remove('pressed'); };
   el.addEventListener('touchstart',  press,   { passive: false });
   el.addEventListener('touchend',    release, { passive: false });
   el.addEventListener('touchcancel', release, { passive: false });
@@ -42,8 +32,6 @@ function tryFullscreen(): void {
   } catch (_) { /* iOS Safari doesn't support it */ }
 }
 
-// ── Main ────────────────────────────────────────────────────────────────────
-
 function main(): void {
   const container = document.getElementById('game-container')!;
   container.style.width  = `${W}px`;
@@ -54,12 +42,10 @@ function main(): void {
   const ctx    = gameCanvas.getContext('2d')!;
   const hudCtx = hudCanvas.getContext('2d')!;
 
-  // Viewport resize — uses visualViewport when available (more accurate on mobile)
   function getViewport() {
     const vp = window.visualViewport;
     return vp ? { w: vp.width, h: vp.height } : { w: window.innerWidth, h: window.innerHeight };
   }
-
   function resize(): void {
     const { w: vw, h: vh } = getViewport();
     const scale = Math.min(vw / W, vh / H);
@@ -67,71 +53,115 @@ function main(): void {
     const oy = Math.floor((vh - H * scale) / 2);
     container.style.transform = `translate(${ox}px,${oy}px) scale(${scale})`;
   }
-
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 120));
   window.visualViewport?.addEventListener('resize', resize);
   resize();
 
   const input = new InputManager();
-
   bindTouchBtn('btn-left',  'ArrowLeft',  input);
   bindTouchBtn('btn-right', 'ArrowRight', input);
   bindTouchBtn('btn-gas',   'ArrowUp',    input);
   bindTouchBtn('btn-brake', 'ArrowDown',  input);
-
   document.addEventListener('touchstart', tryFullscreen, { once: true, passive: true });
 
-  // ── Game state ─────────────────────────────────────────────────────────
+  // ── Game state ────────────────────────────────────────────────────────
 
   let scene: RaceScene | null = null;
-  const restartBtn = document.getElementById('btn-restart')!;
+  let paused = false;
+  let escWasDown = false;
+
+  const raceEndBtns  = document.getElementById('race-end-btns')!;
+  const restartBtn   = document.getElementById('btn-restart')!;
+  const menuBtn      = document.getElementById('btn-menu')!;
+  const pauseOverlay = document.getElementById('pause-overlay')!;
+  const pauseBtn     = document.getElementById('btn-pause')!;
+
+  function showEndButtons(isOnline: boolean): void {
+    raceEndBtns.style.display  = 'flex';
+    restartBtn.style.display   = isOnline ? 'none' : '';
+    menuBtn.style.display      = '';
+  }
+  function hideEndButtons(): void {
+    raceEndBtns.style.display = 'none';
+  }
+
+  function setPaused(val: boolean): void {
+    paused = val;
+    pauseOverlay.style.display = val ? 'flex' : 'none';
+  }
+
+  function goToMenu(): void {
+    setPaused(false);
+    scene?.disconnect();
+    scene = null;
+    hideEndButtons();
+    pauseBtn.style.display = 'none';
+    showLobby();
+  }
 
   const loop = new GameLoop(
     ctx, hudCtx,
     (dt) => {
       if (!scene) return;
-      scene.update(dt);
-      restartBtn.style.display = scene.isFinished ? 'block' : 'none';
+
+      const escIsDown = input.isDown('Escape') || input.isDown('KeyP');
+      if (escIsDown && !escWasDown && !scene.isFinished) setPaused(!paused);
+      escWasDown = escIsDown;
+
+      if (!paused) scene.update(dt);
+
+      if (scene.isFinished && raceEndBtns.style.display === 'none') {
+        showEndButtons(scene.gameMode === 'online');
+      }
     },
     (c, h) => scene?.render(c, h),
   );
 
-  function startGame(config: GameConfig): void {
-    scene = new RaceScene(input, config);
-    restartBtn.style.display = 'none';
-    hideLobby();
-  }
+  // Pause overlay buttons
+  document.getElementById('btn-resume')!.addEventListener('click', () => setPaused(false));
+  document.getElementById('btn-pause-menu')!.addEventListener('click', goToMenu);
 
-  // ── Restart button ─────────────────────────────────────────────────────
+  // In-game pause button (mobile / always-visible)
+  pauseBtn.addEventListener('click', () => {
+    if (scene && !scene.isFinished) setPaused(!paused);
+  });
 
+  // Restart (offline only)
   const triggerRestart = (e: Event): void => {
     e.preventDefault();
     if (!scene) return;
-    if (scene.gameMode === 'online') {
-      scene.disconnect();
-      scene = null;
-      restartBtn.style.display = 'none';
-      showLobby();
-    } else {
-      scene.restart();
-      restartBtn.style.display = 'none';
-    }
+    scene.restart();
+    hideEndButtons();
   };
   restartBtn.addEventListener('click',    triggerRestart);
   restartBtn.addEventListener('touchend', triggerRestart, { passive: false });
 
-  // ── Lobby ──────────────────────────────────────────────────────────────
+  // Back to menu (always available after finish, also in pause)
+  const triggerMenu = (e: Event): void => { e.preventDefault(); goToMenu(); };
+  menuBtn.addEventListener('click',    triggerMenu);
+  menuBtn.addEventListener('touchend', triggerMenu, { passive: false });
 
-  const lobby         = document.getElementById('lobby-overlay')!;
-  const stepName      = document.getElementById('step-name')!;
-  const stepAI        = document.getElementById('step-ai')!;
-  const stepOnline    = document.getElementById('step-online')!;
-  const stepWaiting   = document.getElementById('step-waiting')!;
-  const nameInput     = document.getElementById('player-name') as HTMLInputElement;
-  const errorMsg      = document.getElementById('lobby-error')!;
+  // ── Start game ────────────────────────────────────────────────────────
 
-  // Restore saved name
+  function startGame(config: GameConfig): void {
+    scene = new RaceScene(input, config);
+    paused = false;
+    hideEndButtons();
+    pauseBtn.style.display = 'block';
+    hideLobby();
+  }
+
+  // ── Lobby ─────────────────────────────────────────────────────────────
+
+  const lobby       = document.getElementById('lobby-overlay')!;
+  const stepName    = document.getElementById('step-name')!;
+  const stepAI      = document.getElementById('step-ai')!;
+  const stepOnline  = document.getElementById('step-online')!;
+  const stepWaiting = document.getElementById('step-waiting')!;
+  const nameInput   = document.getElementById('player-name') as HTMLInputElement;
+  const errorMsg    = document.getElementById('lobby-error')!;
+
   const savedName = localStorage.getItem('playerName');
   if (savedName) nameInput.value = savedName;
 
@@ -140,29 +170,23 @@ function main(): void {
     showStep(stepName);
     container.style.opacity = '0';
   }
-
   function hideLobby(): void {
     lobby.style.display = 'none';
     container.style.opacity = '1';
   }
-
   function showStep(step: HTMLElement): void {
     for (const s of [stepName, stepAI, stepOnline, stepWaiting]) s.hidden = true;
     step.hidden = false;
     errorMsg.textContent = '';
   }
-
   function getPlayerName(): string {
     const name = nameInput.value.trim().slice(0, 20) || 'Piloto';
     localStorage.setItem('playerName', name);
     return name;
   }
+  function showError(msg: string): void { errorMsg.textContent = msg; }
 
-  function showError(msg: string): void {
-    errorMsg.textContent = msg;
-  }
-
-  // ── AI mode ────────────────────────────────────────────────────────────
+  // ── AI mode ───────────────────────────────────────────────────────────
 
   let selectedDifficulty: Difficulty = 'medium';
 
@@ -181,7 +205,7 @@ function main(): void {
     startGame({ playerName: getPlayerName(), mode: 'offline', difficulty: selectedDifficulty });
   });
 
-  // ── Online mode ────────────────────────────────────────────────────────
+  // ── Online mode ───────────────────────────────────────────────────────
 
   let network: NetworkManager | null = null;
 
@@ -201,7 +225,6 @@ function main(): void {
     }
   }
 
-  // Create room
   document.getElementById('btn-create-room')!.addEventListener('click', async () => {
     const nm = await connectNetwork();
     if (!nm) return;
@@ -214,19 +237,13 @@ function main(): void {
       updatePlayerList(nm);
       showStep(stepWaiting);
     };
-
     nm.onPlayerJoined = () => updatePlayerList(nm);
     nm.onPlayerLeft   = () => updatePlayerList(nm);
-
-    nm.onStart = () => {
-      startGame({ playerName: name, mode: 'online', difficulty: 'medium', network: nm });
-    };
-
+    nm.onStart = () => startGame({ playerName: name, mode: 'online', difficulty: 'medium', network: nm });
     nm.onError = (msg) => showError(msg);
     nm.createRoom(name);
   });
 
-  // Join room
   document.getElementById('btn-join-room')!.addEventListener('click', async () => {
     const code = (document.getElementById('room-code-input') as HTMLInputElement).value.trim();
     if (code.length < 6) { showError('Código inválido. Deve ter 6 caracteres.'); return; }
@@ -243,28 +260,16 @@ function main(): void {
         names.map(n => `<div class="player-entry">${n}</div>`).join('');
       showStep(stepWaiting);
     };
-
     nm.onPlayerJoined = () => updatePlayerList(nm);
     nm.onPlayerLeft   = () => updatePlayerList(nm);
-
-    nm.onStart = () => {
-      startGame({ playerName: name, mode: 'online', difficulty: 'medium', network: nm });
-    };
-
+    nm.onStart = () => startGame({ playerName: name, mode: 'online', difficulty: 'medium', network: nm });
     nm.onError = (msg) => { showError(msg); nm.disconnect(); network = null; };
     nm.joinRoom(name, code);
   });
 
-  // Host starts online race
-  document.getElementById('btn-start-online')!.addEventListener('click', () => {
-    if (network) network.startRace();
-  });
-
-  // Leave room
+  document.getElementById('btn-start-online')!.addEventListener('click', () => network?.startRace());
   document.getElementById('btn-leave-room')!.addEventListener('click', () => {
-    network?.disconnect();
-    network = null;
-    showStep(stepOnline);
+    network?.disconnect(); network = null; showStep(stepOnline);
   });
 
   function updatePlayerList(nm: NetworkManager): void {
@@ -272,9 +277,8 @@ function main(): void {
       nm.playerNames.map((n, i) => `<div class="player-entry">${i === 0 ? '👑 ' : ''}${n}</div>`).join('');
   }
 
-  // Start with lobby visible
   showLobby();
-  loop.start(); // loop runs but scene is null — no-op until game starts
+  loop.start();
 }
 
 main();
