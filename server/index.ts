@@ -6,6 +6,9 @@ import { db } from './db.js';
 const app = express();
 app.use(express.json());
 
+// Serve built frontend in production (dist/ created by `npm run build`)
+app.use(express.static('dist'));
+
 // CORS — allow browser clients on any origin during development
 app.use((_req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
