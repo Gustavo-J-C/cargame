@@ -45,10 +45,8 @@ export function buildTrack(def: TrackDefinition): TrackGeometry {
     rightEdge.push(positions[i].add(normal.scale(-halfW)));
   }
 
-  // Boundary polygon: walk left edge forward, right edge backward
   const boundaryPolygon = [...leftEdge, ...[...rightEdge].reverse()];
 
-  // Start/finish line across the track at startFinishIndex
   const sfSampleIndex = Math.floor(
     (def.startFinishIndex / def.controlPoints.length) * n
   );
@@ -60,5 +58,23 @@ export function buildTrack(def: TrackDefinition): TrackGeometry {
   const tangentAtStart = tangentAt(positions, sfSampleIndex);
   const startAngle = Math.atan2(tangentAtStart.y, tangentAtStart.x);
 
-  return { centerline: positions, leftEdge, rightEdge, widths, boundaryPolygon, startLine, startAngle };
+  // Compute bounding box for minimap
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of positions) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  return {
+    centerline: positions,
+    leftEdge,
+    rightEdge,
+    widths,
+    boundaryPolygon,
+    startLine,
+    startAngle,
+    bounds: { minX, minY, maxX, maxY },
+  };
 }

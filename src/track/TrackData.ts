@@ -22,4 +22,5 @@ export interface TrackGeometry {
   boundaryPolygon: Vector2[];  // left edge + reversed right edge (for collision)
   startLine: { left: Vector2; right: Vector2 };
   startAngle: number;
+  bounds: { minX: number; minY: number; maxX: number; maxY: number };
 }

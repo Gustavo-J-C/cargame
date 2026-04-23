@@ -9,213 +9,237 @@
   <title>Corrida de Kart</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #0a0a12; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      background: #111;
-      overflow: hidden;
-    }
-
-    /* Game canvas — positioned by JS via translate+scale from top-left */
-    #game-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      transform-origin: 0 0;
-    }
-
+    /* ── Game container ─────────────────────────────────────────── */
+    #game-container { position: fixed; top: 0; left: 0; transform-origin: 0 0; transition: opacity 0.3s; }
     canvas { display: block; }
+    #hud-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
 
-    #hud-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-    }
-
-    /* ── Touch controls ─────────────────────────────────────────────
-       Hidden by default; shown on coarse-pointer (touch) devices.
-       Screen is split explicitly into left 50% (steering) and
-       right 50% (gas/brake) so layout is consistent on all phones. */
-    #touch-controls {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 130px;
-      z-index: 50;
-      pointer-events: none;
-    }
-
-    @media (pointer: coarse) {
-      #touch-controls { display: block; }
-    }
-
-    #steer-pad,
-    #action-pad {
-      position: absolute;
-      bottom: 0;
-      height: 100%;
-      width: 50%;
+    /* ── Lobby overlay ──────────────────────────────────────────── */
+    #lobby-overlay {
       display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      /* env() handles notch / home-bar safe area on iOS & Android */
+      position: fixed; inset: 0; z-index: 200;
+      align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a12 100%);
+    }
+
+    .lobby-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 36px 44px;
+      width: min(500px, 92vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    .lobby-title { font-size: 38px; font-weight: 900; color: #f9e79f; letter-spacing: 1px; text-shadow: 0 2px 16px rgba(249,231,159,0.35); margin-bottom: 4px; }
+    .lobby-subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+
+    /* Each step is a full-width flex column */
+    .lobby-step { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+
+    .label { font-size: 12px; color: #888; letter-spacing: 1px; text-transform: uppercase; align-self: flex-start; }
+
+    #player-name {
+      width: 100%; padding: 12px 16px;
+      border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.07); color: #fff;
+      font-size: 18px; font-weight: 600; outline: none;
+      transition: border-color 0.2s;
+    }
+    #player-name:focus { border-color: #f9e79f; }
+    #player-name::placeholder { color: #444; }
+
+    .mode-btns { display: flex; gap: 12px; width: 100%; }
+    .mode-btn {
+      flex: 1; padding: 16px 10px; border-radius: 12px;
+      border: 2px solid transparent; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px;
+    }
+    #btn-mode-ai    { background: rgba(46,204,113,0.15); border-color: rgba(46,204,113,0.45); color: #2ecc71; }
+    #btn-mode-ai:hover    { background: rgba(46,204,113,0.28); border-color: #2ecc71; }
+    #btn-mode-online { background: rgba(52,152,219,0.15); border-color: rgba(52,152,219,0.45); color: #3498db; }
+    #btn-mode-online:hover { background: rgba(52,152,219,0.28); border-color: #3498db; }
+
+    .section-label { font-size: 13px; color: #888; letter-spacing: 1.5px; text-transform: uppercase; }
+
+    .diff-btns { display: flex; gap: 8px; width: 100%; }
+    .diff-btn {
+      flex: 1; padding: 12px 6px; border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.13); background: rgba(255,255,255,0.04);
+      color: #888; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s;
+    }
+    .diff-btn:hover { border-color: rgba(255,255,255,0.3); color: #ddd; }
+    .diff-btn.active { border-color: #f9e79f; background: rgba(249,231,159,0.12); color: #f9e79f; }
+
+    .action-btn {
+      width: 100%; padding: 17px; border-radius: 50px; border: none;
+      font-size: 19px; font-weight: 800; letter-spacing: 0.8px;
+      cursor: pointer; background: #f9e79f; color: #111;
+      transition: transform 0.1s, box-shadow 0.1s;
+      box-shadow: 0 4px 20px rgba(249,231,159,0.3);
+    }
+    .action-btn:active { transform: scale(0.96); }
+    .action-btn.secondary {
+      background: rgba(255,255,255,0.07); color: #888;
+      font-size: 14px; font-weight: 600; box-shadow: none; padding: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .action-btn.secondary:hover { color: #ccc; }
+
+    .divider { color: #444; font-size: 13px; }
+
+    .join-row { display: flex; gap: 10px; width: 100%; }
+    #room-code-input {
+      flex: 1; padding: 12px 14px;
+      border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.07); color: #fff;
+      font-size: 20px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 4px; outline: none; text-align: center;
+    }
+    #room-code-input:focus { border-color: #3498db; }
+    #btn-join-room {
+      padding: 12px 18px; border-radius: 10px; border: none;
+      background: #3498db; color: #fff; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+    }
+    #btn-join-room:hover { background: #2980b9; }
+
+    .room-code-big {
+      font-size: 34px; font-weight: 900; letter-spacing: 6px; color: #f9e79f;
+      background: rgba(249,231,159,0.08); border: 2px dashed rgba(249,231,159,0.35);
+      border-radius: 12px; padding: 12px 24px; width: 100%; text-align: center;
+    }
+    .room-hint { font-size: 12px; color: #555; text-align: center; }
+
+    #players-list { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .player-entry { padding: 9px 14px; border-radius: 8px; background: rgba(255,255,255,0.06); color: #ccc; font-size: 15px; }
+
+    #waiting-msg { color: #555; font-size: 13px; text-align: center; }
+
+    #lobby-error { color: #e74c3c; font-size: 13px; text-align: center; min-height: 16px; width: 100%; }
+
+    /* ── Touch controls ─────────────────────────────────────────── */
+    #touch-controls { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 130px; z-index: 50; pointer-events: none; }
+    @media (pointer: coarse) { #touch-controls { display: block; } }
+    #steer-pad, #action-pad {
+      position: absolute; bottom: 0; height: 100%; width: 50%;
+      display: flex; align-items: flex-end; gap: 10px;
       padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
       pointer-events: all;
     }
-
-    #steer-pad {
-      left: 0;
-      justify-content: flex-start;
-      padding-left: max(16px, env(safe-area-inset-left, 16px));
-    }
-
-    #action-pad {
-      right: 0;
-      justify-content: flex-end;
-      padding-right: max(16px, env(safe-area-inset-right, 16px));
-    }
-
+    #steer-pad  { left: 0;  justify-content: flex-start; padding-left:  max(16px, env(safe-area-inset-left,  16px)); }
+    #action-pad { right: 0; justify-content: flex-end;   padding-right: max(16px, env(safe-area-inset-right, 16px)); }
     .touch-btn {
-      flex-shrink: 0;
-      border-radius: 50%;
-      border: 2.5px solid rgba(255,255,255,0.35);
-      background: rgba(255,255,255,0.10);
-      color: rgba(255,255,255,0.85);
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-shrink: 0; border-radius: 50%;
+      border: 2.5px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.85); cursor: pointer; user-select: none;
+      -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+      touch-action: none; display: flex; align-items: center; justify-content: center;
       transition: background 0.08s, border-color 0.08s;
     }
+    .touch-btn.pressed { background: rgba(255,255,255,0.30); border-color: rgba(255,255,255,0.65); }
+    .steer-btn { width: 70px; height: 70px; font-size: 24px; }
+    #btn-gas { width: 90px; height: 90px; background: rgba(46,204,113,0.18); border-color: rgba(46,204,113,0.55); font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: #2ecc71; }
+    #btn-gas.pressed { background: rgba(46,204,113,0.42); border-color: #2ecc71; }
+    #btn-brake { width: 68px; height: 68px; background: rgba(231,76,60,0.18); border-color: rgba(231,76,60,0.50); font-size: 11px; font-weight: 700; color: #e74c3c; }
+    #btn-brake.pressed { background: rgba(231,76,60,0.40); border-color: #e74c3c; }
 
-    .touch-btn.pressed {
-      background: rgba(255,255,255,0.30);
-      border-color: rgba(255,255,255,0.65);
-    }
-
-    .steer-btn {
-      width: 70px;
-      height: 70px;
-      font-size: 24px;
-    }
-
-    #btn-gas {
-      width: 90px;
-      height: 90px;
-      background: rgba(46,204,113,0.18);
-      border-color: rgba(46,204,113,0.55);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: #2ecc71;
-    }
-    #btn-gas.pressed {
-      background: rgba(46,204,113,0.42);
-      border-color: #2ecc71;
-    }
-
-    #btn-brake {
-      width: 68px;
-      height: 68px;
-      background: rgba(231,76,60,0.18);
-      border-color: rgba(231,76,60,0.50);
-      font-size: 11px;
-      font-weight: 700;
-      color: #e74c3c;
-    }
-    #btn-brake.pressed {
-      background: rgba(231,76,60,0.40);
-      border-color: #e74c3c;
-    }
-
-    /* ── Restart button ─────────────────────────────────────────────
-       Fixed in viewport so it doesn't move with canvas scaling.
-       Positioned above touch controls on mobile, lower on desktop. */
+    /* ── Restart button ─────────────────────────────────────────── */
     #btn-restart {
-      display: none;
-      position: fixed;
+      display: none; position: fixed;
       bottom: max(150px, calc(130px + env(safe-area-inset-bottom, 0px)));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 100;
-      padding: 18px 48px;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      color: #111;
-      background: #f9e79f;
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+      left: 50%; transform: translateX(-50%);
+      z-index: 100; padding: 18px 48px;
+      font-size: 22px; font-weight: 800; letter-spacing: 1px;
+      color: #111; background: #f9e79f; border: none; border-radius: 50px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
       box-shadow: 0 4px 24px rgba(249,231,159,0.45);
-      transition: transform 0.1s, box-shadow 0.1s;
-      white-space: nowrap;
+      transition: transform 0.1s, box-shadow 0.1s; white-space: nowrap;
     }
+    #btn-restart:active { transform: translateX(-50%) scale(0.95); box-shadow: 0 2px 10px rgba(249,231,159,0.3); }
+    @media (pointer: fine) { #btn-restart { bottom: 60px; } }
 
-    #btn-restart:active {
-      transform: translateX(-50%) scale(0.95);
-      box-shadow: 0 2px 10px rgba(249,231,159,0.3);
-    }
-
-    /* On desktop (non-touch), sit closer to bottom */
-    @media (pointer: fine) {
-      #btn-restart { bottom: 60px; }
-    }
-
-    /* ── Portrait warning ────────────────────────────────────────── */
+    /* ── Portrait warning ───────────────────────────────────────── */
     #portrait-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: #111;
-      z-index: 300;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 18px;
-      color: #fff;
-      text-align: center;
+      display: none; position: fixed; inset: 0; background: #111; z-index: 300;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 18px; color: #fff; text-align: center;
     }
-
-    @media (pointer: coarse) and (orientation: portrait) {
-      #portrait-overlay { display: flex; }
-    }
-
-    #portrait-overlay .icon {
-      font-size: 56px;
-      animation: tilt 2s ease-in-out infinite;
-    }
-
-    #portrait-overlay p {
-      font-size: 20px;
-      opacity: 0.8;
-      line-height: 1.5;
-    }
-
-    @keyframes tilt {
-      0%, 100% { transform: rotate(0deg); }
-      50%       { transform: rotate(-90deg); }
-    }
+    @media (pointer: coarse) and (orientation: portrait) { #portrait-overlay { display: flex; } }
+    #portrait-overlay .icon { font-size: 56px; animation: tilt 2s ease-in-out infinite; }
+    #portrait-overlay p { font-size: 20px; opacity: 0.8; line-height: 1.5; }
+    @keyframes tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } }
   </style>
 </head>
 <body>
 
+  <!-- ── Lobby ─────────────────────────────────────────────────────────── -->
+  <div id="lobby-overlay">
+    <div class="lobby-card">
+      <div class="lobby-title">Corrida de Kart</div>
+      <div class="lobby-subtitle">Grande Circuito · 3 Voltas</div>
+
+      <!-- Step 1: Name + mode selection -->
+      <div id="step-name" class="lobby-step">
+        <span class="label">Piloto</span>
+        <input id="player-name" type="text" maxlength="20" placeholder="Seu nome" autocomplete="off" />
+        <div class="mode-btns">
+          <button id="btn-mode-ai"     class="mode-btn">🤖 vs IA</button>
+          <button id="btn-mode-online" class="mode-btn">🌐 Online</button>
+        </div>
+      </div>
+
+      <!-- Step 2a: AI difficulty -->
+      <div id="step-ai" class="lobby-step" hidden>
+        <span class="section-label">Dificuldade dos oponentes</span>
+        <div class="diff-btns">
+          <button class="diff-btn"        data-diff="easy">Fácil</button>
+          <button class="diff-btn active" data-diff="medium">Médio</button>
+          <button class="diff-btn"        data-diff="hard">Difícil</button>
+        </div>
+        <button id="btn-start-ai" class="action-btn">INICIAR CORRIDA</button>
+        <button id="btn-back-ai"  class="action-btn secondary">← Voltar</button>
+      </div>
+
+      <!-- Step 2b: Online options -->
+      <div id="step-online" class="lobby-step" hidden>
+        <button id="btn-create-room" class="action-btn">+ Criar Nova Sala</button>
+        <div class="divider">— ou entre em uma sala —</div>
+        <div class="join-row">
+          <input id="room-code-input" type="text" maxlength="6" placeholder="CÓDIGO" autocomplete="off" />
+          <button id="btn-join-room">ENTRAR</button>
+        </div>
+        <button id="btn-back-online" class="action-btn secondary">← Voltar</button>
+      </div>
+
+      <!-- Step 3: Waiting room -->
+      <div id="step-waiting" class="lobby-step" hidden>
+        <div class="room-hint">Compartilhe o código com seus amigos:</div>
+        <div class="room-code-big" id="room-code-display">------</div>
+        <div id="players-list"></div>
+        <button id="btn-start-online" class="action-btn" style="display:none">INICIAR CORRIDA</button>
+        <div id="waiting-msg">Aguardando o host iniciar…</div>
+        <button id="btn-leave-room" class="action-btn secondary">Sair da Sala</button>
+      </div>
+
+      <!-- Shared error message (always visible at bottom of card) -->
+      <div id="lobby-error"></div>
+    </div>
+  </div>
+
+  <!-- ── Game canvas ───────────────────────────────────────────────────── -->
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
     <canvas id="hud-canvas"></canvas>
   </div>
 
-  <!-- Touch controls — visíveis só em dispositivos touch via CSS -->
+  <!-- ── Touch controls ───────────────────────────────────────────────── -->
   <div id="touch-controls">
     <div id="steer-pad">
       <button id="btn-left"  class="touch-btn steer-btn" aria-label="Virar à esquerda">◀</button>
@@ -227,10 +251,10 @@
     </div>
   </div>
 
-  <!-- Botão de reinício — elemento HTML real para funcionar com touch -->
+  <!-- ── Restart button ───────────────────────────────────────────────── -->
   <button id="btn-restart" aria-label="Reiniciar corrida">↺ JOGAR DE NOVO</button>
 
-  <!-- Aviso de orientação retrato -->
+  <!-- ── Portrait warning ─────────────────────────────────────────────── -->
   <div id="portrait-overlay">
     <div class="icon">📱</div>
     <p>Gire o dispositivo<br>para modo paisagem</p>
