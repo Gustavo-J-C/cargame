@@ -12,7 +12,7 @@ export const CONFIG = {
     BRAKE_FORCE: 650,
     ROLLING_FRICTION: 0.992,
     LATERAL_GRIP: 0.60,
-    MAX_STEER_RATE: 3.2,
+    MAX_STEER_RATE: 2.2,
     RADIUS: 13,
     WIDTH: 26,
     HEIGHT: 15,

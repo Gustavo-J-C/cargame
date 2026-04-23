@@ -15,6 +15,7 @@ export interface RaceState {
 export class RaceManager {
   public phase: RacePhase = 'countdown';
   public countdown = 3.0;
+  public goDisplayTime = 0; // how long to keep showing VÁ! after countdown ends
   public raceTime = 0;
   public rankings: number[] = [];
   public playerRank = 1;
@@ -27,12 +28,14 @@ export class RaceManager {
       if (this.countdown <= 0) {
         this.countdown = 0;
         this.phase = 'racing';
+        this.goDisplayTime = 0.7; // show VÁ! for 0.7s after starting
       }
       return;
     }
 
     if (this.phase === 'racing') {
       this.raceTime += dt;
+      if (this.goDisplayTime > 0) this.goDisplayTime -= dt;
       this.updateWaypoints();
       this.updateRankings();
 

@@ -48,9 +48,11 @@ export function renderHUD(
   ctx.font = 'bold 22px monospace';
   ctx.fillText(ordinal(rank), px + 130, py + 50);
 
-  // Countdown overlay
+  // Countdown overlay (also stays visible briefly after GO to show VÁ!)
   if (race.phase === 'countdown') {
     renderCountdown(ctx, race.countdownDisplay, width, height);
+  } else if (race.goDisplayTime > 0) {
+    renderCountdown(ctx, 'VÁ!', width, height);
   }
 
   // Finished overlay

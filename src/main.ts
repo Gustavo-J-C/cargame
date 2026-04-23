@@ -12,11 +12,9 @@ function setupCanvas(id: string): HTMLCanvasElement {
   return el;
 }
 
-// Bind a touch button to a virtual key — handles multi-touch correctly
 function bindTouchBtn(id: string, keyCode: string, input: InputManager): void {
   const el = document.getElementById(id);
   if (!el) return;
-
   const press = (e: Event): void => {
     e.preventDefault();
     input.setVirtual(keyCode, true);
@@ -27,10 +25,18 @@ function bindTouchBtn(id: string, keyCode: string, input: InputManager): void {
     input.setVirtual(keyCode, false);
     el.classList.remove('pressed');
   };
-
   el.addEventListener('touchstart',  press,   { passive: false });
   el.addEventListener('touchend',    release, { passive: false });
   el.addEventListener('touchcancel', release, { passive: false });
+}
+
+// Request fullscreen on first user touch (requires gesture, silent fail on iOS)
+function tryFullscreen(): void {
+  const el = document.documentElement as any;
+  try {
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch (_) { /* ignored — iOS Safari doesn't support it */ }
 }
 
 function main(): void {
@@ -44,34 +50,42 @@ function main(): void {
   const ctx    = gameCanvas.getContext('2d')!;
   const hudCtx = hudCanvas.getContext('2d')!;
 
+  // Use visualViewport when available — more accurate on mobile (handles
+  // browser chrome, on-screen keyboard, safe areas better than innerWidth/Height)
+  function getViewport(): { w: number; h: number } {
+    const vp = window.visualViewport;
+    return vp
+      ? { w: vp.width, h: vp.height }
+      : { w: window.innerWidth, h: window.innerHeight };
+  }
+
+  function resize(): void {
+    const { w: vw, h: vh } = getViewport();
+    const scale = Math.min(vw / W, vh / H);
+    // Integer offsets avoid sub-pixel blurring on most devices
+    const ox = Math.floor((vw - W * scale) / 2);
+    const oy = Math.floor((vh - H * scale) / 2);
+    // translate positions the scaled canvas, transformOrigin 0 0 keeps math clean
+    container.style.transform = `translate(${ox}px,${oy}px) scale(${scale})`;
+  }
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+  window.visualViewport?.addEventListener('resize', resize);
+  resize();
+
   const input = new InputManager();
 
-  // Wire touch buttons → virtual keys
   bindTouchBtn('btn-left',  'ArrowLeft',  input);
   bindTouchBtn('btn-right', 'ArrowRight', input);
   bindTouchBtn('btn-gas',   'ArrowUp',    input);
   bindTouchBtn('btn-brake', 'ArrowDown',  input);
 
-  // Scale game canvas to fill available screen
-  function resize(): void {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const scale = Math.min(vw / W, vh / H);
-
-    container.style.transform       = `scale(${scale})`;
-    container.style.transformOrigin = 'top left';
-    container.style.position        = 'absolute';
-    container.style.left            = `${(vw - W * scale) / 2}px`;
-    container.style.top             = `${(vh - H * scale) / 2}px`;
-  }
-
-  window.addEventListener('resize', resize);
-  window.addEventListener('orientationchange', resize);
-  resize();
+  // Fullscreen on first touch (must be triggered by user gesture)
+  document.addEventListener('touchstart', tryFullscreen, { once: true, passive: true });
 
   const scene = new RaceScene(input);
 
-  // Restart button — HTML element so touch works natively on mobile
   const restartBtn = document.getElementById('btn-restart')!;
   const triggerRestart = (e: Event): void => {
     e.preventDefault();
@@ -85,7 +99,6 @@ function main(): void {
     ctx, hudCtx,
     (dt) => {
       scene.update(dt);
-      // Show/hide restart button based on race state
       restartBtn.style.display = scene.isFinished ? 'block' : 'none';
     },
     (c, h) => scene.render(c, h),

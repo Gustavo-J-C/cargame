@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -8,18 +8,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Corrida de Kart</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
       background: #111;
-      width: 100vw;
-      height: 100vh;
       overflow: hidden;
-      font-family: sans-serif;
     }
 
+    /* Game canvas — positioned by JS via translate+scale from top-left */
     #game-container {
-      position: relative;
+      position: fixed;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
     }
 
     canvas { display: block; }
@@ -31,60 +34,79 @@
       pointer-events: none;
     }
 
-    /* ── Touch controls ─────────────────────────────────────────── */
+    /* ── Touch controls ─────────────────────────────────────────────
+       Hidden by default; shown on coarse-pointer (touch) devices.
+       Screen is split explicitly into left 50% (steering) and
+       right 50% (gas/brake) so layout is consistent on all phones. */
     #touch-controls {
-      display: none; /* shown below for touch devices */
+      display: none;
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      padding: 14px 18px 20px;
+      height: 130px;
       z-index: 50;
-      justify-content: space-between;
-      align-items: flex-end;
       pointer-events: none;
     }
 
     @media (pointer: coarse) {
-      #touch-controls { display: flex; }
+      #touch-controls { display: block; }
     }
 
-    #steer-pad, #action-pad {
+    #steer-pad,
+    #action-pad {
+      position: absolute;
+      bottom: 0;
+      height: 100%;
+      width: 50%;
       display: flex;
-      gap: 10px;
       align-items: flex-end;
+      gap: 10px;
+      /* env() handles notch / home-bar safe area on iOS & Android */
+      padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
       pointer-events: all;
     }
 
+    #steer-pad {
+      left: 0;
+      justify-content: flex-start;
+      padding-left: max(16px, env(safe-area-inset-left, 16px));
+    }
+
+    #action-pad {
+      right: 0;
+      justify-content: flex-end;
+      padding-right: max(16px, env(safe-area-inset-right, 16px));
+    }
+
     .touch-btn {
+      flex-shrink: 0;
       border-radius: 50%;
       border: 2.5px solid rgba(255,255,255,0.35);
       background: rgba(255,255,255,0.10);
       color: rgba(255,255,255,0.85);
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
       touch-action: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.08s;
-      -webkit-user-select: none;
+      transition: background 0.08s, border-color 0.08s;
     }
 
     .touch-btn.pressed {
-      background: rgba(255,255,255,0.32);
-      border-color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.30);
+      border-color: rgba(255,255,255,0.65);
     }
 
-    /* Steering: two medium circles side-by-side */
     .steer-btn {
       width: 70px;
       height: 70px;
       font-size: 24px;
     }
 
-    /* Gas: big green circle */
     #btn-gas {
       width: 90px;
       height: 90px;
@@ -100,7 +122,6 @@
       border-color: #2ecc71;
     }
 
-    /* Brake: smaller red circle */
     #btn-brake {
       width: 68px;
       height: 68px;
@@ -113,6 +134,42 @@
     #btn-brake.pressed {
       background: rgba(231,76,60,0.40);
       border-color: #e74c3c;
+    }
+
+    /* ── Restart button ─────────────────────────────────────────────
+       Fixed in viewport so it doesn't move with canvas scaling.
+       Positioned above touch controls on mobile, lower on desktop. */
+    #btn-restart {
+      display: none;
+      position: fixed;
+      bottom: max(150px, calc(130px + env(safe-area-inset-bottom, 0px)));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      padding: 18px 48px;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #111;
+      background: #f9e79f;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      box-shadow: 0 4px 24px rgba(249,231,159,0.45);
+      transition: transform 0.1s, box-shadow 0.1s;
+      white-space: nowrap;
+    }
+
+    #btn-restart:active {
+      transform: translateX(-50%) scale(0.95);
+      box-shadow: 0 2px 10px rgba(249,231,159,0.3);
+    }
+
+    /* On desktop (non-touch), sit closer to bottom */
+    @media (pointer: fine) {
+      #btn-restart { bottom: 60px; }
     }
 
     /* ── Portrait warning ────────────────────────────────────────── */
@@ -136,7 +193,7 @@
 
     #portrait-overlay .icon {
       font-size: 56px;
-      animation: spin 2s linear infinite;
+      animation: tilt 2s ease-in-out infinite;
     }
 
     #portrait-overlay p {
@@ -145,44 +202,9 @@
       line-height: 1.5;
     }
 
-    @keyframes spin {
-      0%   { transform: rotate(0deg); }
-      45%  { transform: rotate(-90deg); }
-      55%  { transform: rotate(-90deg); }
-      100% { transform: rotate(-90deg); }
-    }
-
-    /* ── Restart button ──────────────────────────────────────────── */
-    #btn-restart {
-      display: none; /* shown via JS when race finishes */
-      position: fixed;
-      bottom: 130px; /* above touch controls */
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 100;
-      padding: 18px 48px;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      color: #111;
-      background: #f9e79f;
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-      box-shadow: 0 4px 24px rgba(249,231,159,0.45);
-      transition: transform 0.1s, box-shadow 0.1s;
-    }
-
-    #btn-restart:active {
-      transform: translateX(-50%) scale(0.95);
-      box-shadow: 0 2px 10px rgba(249,231,159,0.3);
-    }
-
-    /* On desktop (no touch controls), center vertically a bit lower */
-    @media (pointer: fine) {
-      #btn-restart { bottom: 60px; }
+    @keyframes tilt {
+      0%, 100% { transform: rotate(0deg); }
+      50%       { transform: rotate(-90deg); }
     }
   </style>
 </head>
@@ -193,7 +215,7 @@
     <canvas id="hud-canvas"></canvas>
   </div>
 
-  <!-- Touch controls (visible only on touch screens via CSS) -->
+  <!-- Touch controls — visíveis só em dispositivos touch via CSS -->
   <div id="touch-controls">
     <div id="steer-pad">
       <button id="btn-left"  class="touch-btn steer-btn" aria-label="Virar à esquerda">◀</button>
@@ -205,10 +227,10 @@
     </div>
   </div>
 
-  <!-- Restart button — shown as HTML element so touch works on mobile -->
+  <!-- Botão de reinício — elemento HTML real para funcionar com touch -->
   <button id="btn-restart" aria-label="Reiniciar corrida">↺ JOGAR DE NOVO</button>
 
-  <!-- Portrait mode reminder -->
+  <!-- Aviso de orientação retrato -->
   <div id="portrait-overlay">
     <div class="icon">📱</div>
     <p>Gire o dispositivo<br>para modo paisagem</p>

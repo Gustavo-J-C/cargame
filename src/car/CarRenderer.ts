@@ -54,12 +54,28 @@ export function drawCar(
   roundRect(ctx, -W * 0.15, -H * 0.32, W * 0.3, H * 0.64, 3);
   ctx.fill();
 
-  // Player indicator (small star above)
+  // Player indicator: arrow in front of the car pointing forward.
+  // +x is always the car's forward direction in local space.
   if (isPlayer) {
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('▲', 0, -H / 2 - 6);
+    ctx.save();
+    ctx.translate(W / 2 + 14, 0);
+    // Dark outline for readability over any background
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.moveTo(10, 1);
+    ctx.lineTo(-4, -7);
+    ctx.lineTo(-4,  8);
+    ctx.closePath();
+    ctx.fill();
+    // White arrow
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(9,  0);
+    ctx.lineTo(-5, -6);
+    ctx.lineTo(-5,  6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   ctx.restore();
