@@ -18,11 +18,12 @@ export const CONFIG = {
     WIDTH: 26,
     HEIGHT: 15,
   },
-  // AI speed factors relative to player MAX_SPEED.
-  // Hard AIs match the player exactly so the race feels genuinely competitive.
+  // Difficulty is purely about driving skill — all AIs share the same max speed.
+  // steeringLookahead: how far ahead the AI aims (higher = smoother cornering).
+  // brakingLookahead:  how far ahead it scans for corners (higher = brakes earlier = carries more speed).
   DIFFICULTIES: {
-    easy:   { speeds: [0.72, 0.76, 0.68] as [number, number, number], lookahead: 3 },
-    medium: { speeds: [0.90, 0.94, 0.86] as [number, number, number], lookahead: 4 },
-    hard:   { speeds: [1.00, 1.00, 0.97] as [number, number, number], lookahead: 6 },
+    easy:   { steeringLookahead: 2, brakingLookahead: 4  },
+    medium: { steeringLookahead: 4, brakingLookahead: 9  },
+    hard:   { steeringLookahead: 8, brakingLookahead: 16 },
   },
 };

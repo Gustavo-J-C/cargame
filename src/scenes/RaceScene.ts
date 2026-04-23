@@ -61,9 +61,9 @@ export class RaceScene {
       const diff = CONFIG.DIFFICULTIES[this.config.difficulty];
       // Spread AIs across 3 lanes so they don't all stack on the centreline
       this.aiCars = [
-        new AICar(gridStates[1], diff.speeds[0], diff.lookahead, -38),
-        new AICar(gridStates[2], diff.speeds[1], diff.lookahead,   0),
-        new AICar(gridStates[3], diff.speeds[2], diff.lookahead,  38),
+        new AICar(gridStates[1], diff.steeringLookahead, diff.brakingLookahead, -38),
+        new AICar(gridStates[2], diff.steeringLookahead, diff.brakingLookahead,   0),
+        new AICar(gridStates[3], diff.steeringLookahead, diff.brakingLookahead,  38),
       ];
     } else {
       this.aiCars = [];
@@ -96,11 +96,8 @@ export class RaceScene {
     if (this.race.phase === 'racing') {
       this.player.update(dt);
 
-      const n = this.geo.centerline.length;
-      const playerProgress = this.player.state.lapCount * n + this.player.state.waypointIndex;
-
       for (const ai of this.aiCars) {
-        ai.update(dt, this.geo.centerline, this.waypointSpeeds, playerProgress);
+        ai.update(dt, this.geo.centerline, this.waypointSpeeds);
       }
       pushCarsOntoTrack(this.allCarStates, this.geo);
       resolveCarCollisions(this.allCarStates);

@@ -5,9 +5,12 @@ import { CONFIG } from '../config';
 export class AICar {
   constructor(
     public state: CarState,
-    private speedFactor = 0.88,
-    private lookaheadCount = 4,
-    // Lateral offset from centerline in pixels; spreads AI across 3 lanes
+    // How many waypoints ahead the car aims its steering target.
+    // Lower = turns later = wider, slower corners.
+    private steeringLookahead = 4,
+    // How many waypoints ahead the car checks for upcoming corner speeds.
+    // Lower = notices corners later = enters too fast.
+    private brakingLookahead = 10,
     private laneOffset = 0,
   ) {}
 
@@ -15,23 +18,19 @@ export class AICar {
     dt: number,
     waypoints: Vector2[],
     waypointSpeeds: number[],
-    playerProgress = 0, // lapCount * n + waypointIndex, for rubber-band
   ): void {
     if (this.state.finished) return;
-
     const n = waypoints.length;
 
-    // ── Steering: aim at lookahead waypoint, offset to preferred lane ──
-    const targetIdx = (this.state.waypointIndex + this.lookaheadCount) % n;
+    // ── Steering: aim at a lookahead waypoint, offset to preferred lane ──
+    const targetIdx = (this.state.waypointIndex + this.steeringLookahead) % n;
     const base = waypoints[targetIdx];
-
-    // Compute lateral offset perpendicular to line from car to target
     const dx = base.x - this.state.position.x;
     const dy = base.y - this.state.position.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
     const target = new Vector2(
       base.x + (-dy / dist) * this.laneOffset,
-      base.y + ( dx / dist) * this.laneOffset,
+      base.y + (dx / dist) * this.laneOffset,
     );
 
     const angleToTarget = Math.atan2(
@@ -40,38 +39,36 @@ export class AICar {
     );
     const angleDiff = normalizeAngle(angleToTarget - this.state.angle);
     const rawSteer = clamp(angleDiff / (Math.PI / 3), -1, 1);
+    this.state.steer += (rawSteer - this.state.steer) * Math.min(1, dt * 10);
 
-    // Smooth steering to reduce oscillation (damped toward raw value)
-    this.state.steer += (rawSteer - this.state.steer) * Math.min(1, dt * 9);
+    // ── Throttle / brake: physics-based look-ahead ──
+    // For each upcoming waypoint j, compute the minimum speed achievable there
+    // if the car brakes at full force from now: vMax = sqrt(u² - 2·B·d).
+    // If the corner target speed is lower than vMax → brake now.
+    const B = CONFIG.CAR.BRAKE_FORCE;
+    const spacing = 15; // approx px per waypoint sample
+    const u = this.state.speed;
+    let needBrake = false;
+    let brakeTarget = CONFIG.CAR.MAX_SPEED;
 
-    // ── Speed: look ahead N waypoints for the minimum upcoming speed ──
-    const lookAhead = 8;
-    let minUpcoming = 1.0;
-    for (let j = 1; j <= lookAhead; j++) {
+    for (let j = 1; j <= this.brakingLookahead; j++) {
       const idx = (this.state.waypointIndex + j) % n;
-      if (waypointSpeeds[idx] < minUpcoming) minUpcoming = waypointSpeeds[idx];
+      const cornerTarget = waypointSpeeds[idx] * CONFIG.CAR.MAX_SPEED;
+      const d = j * spacing;
+      const disc = u * u - 2 * B * d;
+      const vMax = disc > 0 ? Math.sqrt(disc) : 0;
+      if (cornerTarget < vMax) {
+        needBrake = true;
+        if (cornerTarget < brakeTarget) brakeTarget = cornerTarget;
+      }
     }
 
-    // ── Rubber-band: close the gap to player by boosting/trimming speed ──
-    const myProgress = this.state.lapCount * n + this.state.waypointIndex;
-    const gap = playerProgress - myProgress;
-    let rubberBand = 1.0;
-    if (gap > n * 0.25)      rubberBand = 1.06; // far behind — catch up
-    else if (gap < -n * 0.1) rubberBand = 0.96; // far ahead  — ease off
-
-    const desiredSpeed = minUpcoming * CONFIG.CAR.MAX_SPEED * this.speedFactor * rubberBand;
-    const speedErr = desiredSpeed - this.state.speed;
-
-    // Proportional throttle/brake (smoother than bang-bang)
-    if (speedErr > 10) {
-      this.state.throttle = clamp(speedErr / 80, 0.15, 1);
-      this.state.brake = 0;
-    } else if (speedErr < -15) {
+    if (needBrake) {
       this.state.throttle = 0;
-      this.state.brake = clamp(-speedErr / 100, 0, 1);
+      this.state.brake = clamp((u - brakeTarget) / 100, 0.3, 1.0);
     } else {
-      // Cruise — tiny throttle to overcome rolling friction
-      this.state.throttle = 0.12;
+      // Always floor it — no coasting, no artificial speed cap
+      this.state.throttle = 1.0;
       this.state.brake = 0;
     }
 
